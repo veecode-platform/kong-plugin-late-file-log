@@ -1,0 +1,66 @@
+#
+# COMO USAR:
+#
+# docker-compose up
+#
+# KONG MANAGER: http://localhost:8002
+#
+version: "2"
+
+services:
+  kong-db:
+    image: postgres:9.6
+    environment:
+      - POSTGRES_DB=kong
+      - POSTGRES_USER=kong
+      - POSTGRES_PASSWORD=kong
+    volumes:
+      - kongdb:/var/lib/postgresql
+  kong-init:
+    image: kong:3.6
+    depends_on:
+      kong-db:
+        condition: service_started
+    restart: on-failure
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_PASSWORD: kong
+      KONG_PASSWORD: vert1234
+      KONG_PG_DATABASE: kong
+      KONG_LOG_LEVEL: debug
+#      KONG_PLUGINS: "bundled,kong-oidc"
+    command: kong migrations bootstrap
+  kong:
+    image: kong:3.6
+    depends_on:
+      kong-init:
+        condition: service_completed_successfully
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_PASSWORD: kong
+      KONG_PG_DATABASE: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_ADMIN_GUI_URL: http://localhost:8002
+      KONG_ADMIN_GUI_API_URL: http://localhost:8001
+      # AS CONFIGS ACIMA SÃO INÓCUAS EM FREE MODE
+      # KONG PLUGINS
+      KONG_PLUGINS: "bundled,late-file-log"
+    volumes:
+      - ./late-file-log:/usr/local/share/lua/5.1/kong/plugins/late-file-log
+    ports:
+      - 8000:8000
+      - 8443:8443
+      - 8001:8001
+      - 8444:8444
+      - 8002:8002
+      - 8445:8445
+      - 8003:8003
+      - 8004:8004
+volumes:
+  kongdb:
